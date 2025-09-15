@@ -11,6 +11,7 @@ pip install -r requirements.txt
 
 ## Data (classic MNIST IDX)
 https://github.com/cvdfoundation/mnist?tab=readme-ov-file
+
 Download the four IDX files into `data/` (gzipped is fine):
 - train-images-idx3-ubyte.gz
 - train-labels-idx1-ubyte.gz
@@ -28,8 +29,22 @@ You should see shapes (60000, 28, 28) for train images and (10000, 28, 28) for t
 - Float32 casting; default normalization to [0,1].
 - Stratified train/val split (default 90/10) with `random_state=42` for reproducibility.
 
-Check:
+### Check:
 ```bash
 python src/eda_quick.py
 python src/check_split.py
 ```
+#### Label balance:
+Open reports/label_hist_train.png. If any class bar is wildly off (e.g., zero), labels or loader are wrong.
+
+#### Determinism:
+Run python src/check_split.py twice. The printed Train/Val shapes and the final “Deterministic…” line must be identical on both runs.
+
+## From-Scratch One-vs-Rest Perceptron
+- Binary rule: if `y * score <= 0` then `w <- w + y*x` (bias included by feature augmentation).
+- OVR: train 10 binary perceptrons (class `c` vs rest), predict `argmax` of scores.
+- Deterministic: `random_state=42`, fixed shuffle seeds.
+
+Train & evaluate:
+```bash
+python src/train_scratch.py
