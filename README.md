@@ -1,4 +1,4 @@
-# mnist-classic-perceptron
+# MNIST Classic Perceptron
 
 A from-scratch one-vs-rest Perceptron on classic MNIST (IDX files), with a comparison to `sklearn.linear_model.Perceptron`.
 

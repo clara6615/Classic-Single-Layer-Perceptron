@@ -1,0 +1,7 @@
+method,split,accuracy
+scratch,train,0.9282
+sklearn,train,0.8707
+scratch,val,0.9155
+sklearn,val,0.8520
+scratch,test,0.9201
+sklearn,test,0.8642
