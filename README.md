@@ -55,3 +55,11 @@ Train & evaluate:
 python src/train_scratch.py
 ```
 Run `python src/train_scratch.py` twice; the printed accuracies must match to 4 decimals (given same subsets / epochs).
+
+## Baseline: `sklearn.linear_model.Perceptron`
+We train sklearn’s multiclass perceptron with the same features/split and compare.
+
+Run:
+```bash
+python src/compare_sklearn.py
+```
