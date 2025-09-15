@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+# Data & artifacts
+data/
+models/
+*.npz
+# OS/IDE
+.DS_Store
+.vscode/
+.idea/
+# Reports you DO want tracked will be images/text placed in reports/
+# keep the folder even if empty:
+reports/.gitkeep
