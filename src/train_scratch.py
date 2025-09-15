@@ -11,9 +11,12 @@ os.makedirs("models", exist_ok=True)
 
 # --- Config (tweak here) ---
 VAL_RATIO = 0.1
-MAX_EPOCHS = 10
-SUBSET_TRAIN = None   # e.g., 10000 for faster local tests
-SUBSET_TEST  = None   # e.g., 2000
+MAX_EPOCHS = 25
+LEARNING_RATE = 1.0
+MARGIN = 0.05
+AVERAGE = True
+SUBSET_TRAIN = None
+SUBSET_TEST  = None
 
 # --- Load ---
 Xtr_u8, ytr, Xte_u8, yte = load_mnist_dataset("data", subset=SUBSET_TRAIN, as_float=False, normalize=False)
@@ -28,7 +31,15 @@ Xte = flatten_images(to_float(Xte_u8, normalize=True))
 X_tr, y_tr, X_val, y_val = stratified_train_val_split(Xtr, ytr, val_ratio=VAL_RATIO, random_state=42)
 
 # --- Train ---
-model = OneVsRestPerceptron(n_classes=10, max_epochs=MAX_EPOCHS, shuffle=True, random_state=42)
+model = OneVsRestPerceptron(
+    n_classes=10,
+    max_epochs=MAX_EPOCHS,
+    shuffle=True,
+    random_state=42,
+    learning_rate=LEARNING_RATE,
+    margin=MARGIN,
+    average=AVERAGE,
+)
 model.fit(X_tr, y_tr)
 
 # Track mistakes/epoch across classes (sum of binary mistakes)

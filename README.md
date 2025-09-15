@@ -45,6 +45,13 @@ Run python src/check_split.py twice. The printed Train/Val shapes and the final 
 - OVR: train 10 binary perceptrons (class `c` vs rest), predict `argmax` of scores.
 - Deterministic: `random_state=42`, fixed shuffle seeds.
 
+### Tuning
+- Averaged perceptron (`average=True`) typically adds ~1–3% accuracy.
+- More epochs (20–30) help OVR convergence.
+- Optional margin (`margin=0.05–0.1`) can stabilize updates.
+
 Train & evaluate:
 ```bash
 python src/train_scratch.py
+```
+Run `python src/train_scratch.py` twice; the printed accuracies must match to 4 decimals (given same subsets / epochs).
