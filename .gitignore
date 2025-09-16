@@ -15,9 +15,6 @@ Thumbs.db
 # Project data & artifacts
 data/
 models/
-reports/*.png
-reports/*.pdf
-reports/*.svg
 
 # IDE
 .vscode/

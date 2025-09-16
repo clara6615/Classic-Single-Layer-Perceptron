@@ -11,10 +11,10 @@ os.makedirs("models", exist_ok=True)
 
 # --- Config (tweak here) ---
 VAL_RATIO = 0.1
-MAX_EPOCHS = 25
+MAX_EPOCHS = 30
 LEARNING_RATE = 1.0
 MARGIN = 0.05
-AVERAGE = True
+AVERAGE = False
 SUBSET_TRAIN = None
 SUBSET_TEST  = None
 

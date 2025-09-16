@@ -63,3 +63,13 @@ Run:
 ```bash
 python src/compare_sklearn.py
 ```
+
+## Error Analysis
+- Per-class accuracy tables (`reports/per_class_acc_*.csv`)
+- Confusion matrices (val/test)
+- Grids of most-confused pairs (validation set)
+
+Run:
+```bash
+python src/error_analysis.py
+```
