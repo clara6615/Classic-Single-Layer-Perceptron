@@ -98,7 +98,7 @@ python src/app_draw.py
 ```
 
 ## Live Demo (GitHub Pages)
-Try it here: https://h6x-code.github.io/mnist-classic-perceptron/
+Try it here: https://h6x-code.github.io/Classic-Single-Layer-Perceptron/
 
 A zero-backend web demo runs the perceptron entirely in your browser.
 
