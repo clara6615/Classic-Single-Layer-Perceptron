@@ -73,3 +73,24 @@ Run:
 ```bash
 python src/error_analysis.py
 ```
+
+## Results (full MNIST)
+| method  | train | val   | test  |
+|---------|------:|------:|------:|
+| scratch | 0.928 | 0.916 | 0.920 |
+| sklearn | 0.871 | 0.852 | 0.864 |
+
+Artifacts:
+- `reports/accuracy_comparison.png`
+- `reports/confusion_val.png`, `reports/confusion_test.png`
+
+### Notes
+- Scratch uses **averaged** perceptron; sklearn’s `Perceptron` is **not averaged** (expected gap).
+- Deterministic with `np.random.seed(42)` and `random_state=42`.
+
+## Interactive sketchpad (quick demo)
+Draw a digit and run the trained perceptron on it.
+
+```bash
+python src/app_draw.py
+```
