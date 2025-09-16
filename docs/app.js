@@ -135,10 +135,16 @@ function to28(){
 }
 
 // --- Model loading
-let W_nb = null, b = null, mu = null;
+// --- helpers
+function $(id){ const el = document.getElementById(id); if(!el) console.error('Missing #' + id); return el; }
+
 async function loadModel(){
   try {
-    const wResp = await fetch("models/perceptron.json");
+    // Use a robust relative URL against the current page (avoids <base> surprises)
+    const wUrl = new URL('models/perceptron.json', location.href).toString();
+    console.log('[loadModel] fetching', wUrl);
+
+    const wResp = await fetch(wUrl, { cache: 'no-store' });
     if (!wResp.ok) throw new Error(`weights HTTP ${wResp.status}`);
     const w = await wResp.json();
 
@@ -146,27 +152,46 @@ async function loadModel(){
     const nF = w.meta?.n_features ?? 784;
 
     const Wflat = Float32Array.from(w.W_nb);
-    W_nb = Array.from({length: nC}, (_, c) => Wflat.slice(c*nF, (c+1)*nF));
-    b = Float32Array.from(w.b);
+    window.W_nb = Array.from({length: nC}, (_, c) => Wflat.slice(c*nF, (c+1)*nF));
+    window.b = Float32Array.from(w.b);
 
     // optional μ
     try {
-      const muResp = await fetch("models/mu.json");
+      const muUrl = new URL('models/mu.json', location.href).toString();
+      console.log('[loadModel] fetching', muUrl);
+      const muResp = await fetch(muUrl, { cache: 'no-store' });
       if (muResp.ok) {
         const j = await muResp.json();
-        mu = Float32Array.from(j.mu);
+        window.mu = Float32Array.from(j.mu);
+      } else {
+        console.warn('[loadModel] mu.json not found (optional).');
       }
-    } catch {}
+    } catch (e) {
+      console.warn('[loadModel] mu.json fetch failed (optional):', e);
+    }
 
-    STATUS.textContent = `Loaded ${nC} classes × ${W_nb[0].length} features. Centering: ${mu ? "available" : "none"}.`;
-    document.getElementById("predict")?.removeAttribute("disabled");
+    STATUS && (STATUS.textContent = `Loaded ${W_nb.length} classes × ${W_nb[0].length} features. Centering: ${window.mu ? 'available' : 'none'}.`);
+    if (BTN_PRED) BTN_PRED.disabled = false;
+    console.log('[loadModel] ready.');
   } catch (err) {
-    STATUS.textContent = `Model load failed: ${String(err)}`;
-    console.error("Model load failed", err);
+    console.error('[loadModel] failed:', err);
+    STATUS && (STATUS.textContent = `Model load failed: ${String(err)}`);
+    if (BTN_PRED) BTN_PRED.disabled = false;
   }
 }
 
-loadModel();
+// Bind after DOM is ready (also fine if you include <script defer>)
+document.addEventListener('DOMContentLoaded', () => {
+  // Predict: guard, log, and call the existing predict()
+  BTN_PRED?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.W_nb) console.warn('[predict] Model not loaded; attempting anyway.');
+    try { predict(); } catch (err) { console.error('[predict] crashed:', err); }
+  });
+
+  loadModel();
+});
 
 // --- Prediction
 function dot(a, b){ let s=0; for(let i=0;i<a.length;i++) s += a[i]*b[i]; return s; }
