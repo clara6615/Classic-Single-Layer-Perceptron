@@ -28,7 +28,7 @@ np.random.seed(42)
 
 CANVAS_PIXELS = 280  # we draw at 280x280 then downsample by 10x to 28x28
 DOWNSAMPLE = CANVAS_PIXELS // 28
-BRUSH_RADIUS = 5     # in canvas pixels
+BRUSH_RADIUS = 7     # in canvas pixels
 
 MODELS_DIR = "models"
 WEIGHTS_PATH = os.path.join(MODELS_DIR, "perceptron_scratch_weights.npz")
