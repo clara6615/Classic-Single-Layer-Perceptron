@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MNIST Classic Perceptron — Demo</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <header>
+    <h1>MNIST Classic Perceptron</h1>
+    <p>Draw a digit. I’ll downsample to 28×28, apply the repo’s feature transform, and run the <code>argmax(W·x + b)</code>.</p>
+  </header>
+
+  <main>
+    <section id="left">
+      <canvas id="pad" width="280" height="280"></canvas>
+      <div class="controls">
+        <button id="predict">Predict (Space)</button>
+        <button id="clear">Clear (C)</button>
+        <label>Brush <input id="brush" type="range" min="6" max="20" value="12"/></label>
+        <label><input id="invert" type="checkbox"> Invert</label>
+        <label><input id="useCenter" type="checkbox" checked> Center if μ available</label>
+        <button id="download28">Download 28×28 (.csv)</button>
+      </div>
+    </section>
+
+    <section id="right">
+      <div id="status">Loading weights…</div>
+      <div id="pred">Prediction: —</div>
+      <div id="topk"></div>
+      <canvas id="thumb" width="140" height="140" title="28×28 preview (scaled)"></canvas>
+      <details>
+        <summary>Scores (debug)</summary>
+        <pre id="scores"></pre>
+      </details>
+      <p class="note">
+        Model + mean exported from repo; all inference happens in your browser.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <a href="https://github.com/h6x-code/mnist-classic-perceptron">Repo</a>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>
