@@ -128,3 +128,5 @@ button:hover {
     grid-template-columns: auto 1fr;
   }
 }
+
+#predict { position: relative; z-index: 10; }
