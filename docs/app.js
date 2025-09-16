@@ -15,6 +15,53 @@ const CB_INVERT = document.getElementById("invert");
 const CB_CENTER = document.getElementById("useCenter");
 const BTN_DL28 = document.getElementById("download28");
 
+
+document.addEventListener('DOMContentLoaded', () => {
+  // --- element lookups (use your existing ids) ---
+  const BTN_PRED  = document.getElementById('predict');
+  const BTN_CLEAR = document.getElementById('clear');
+  const SL_BRUSH  = document.getElementById('brush');
+  const BTN_DL28  = document.getElementById('download28');
+
+  // Optional: log if something’s missing
+  if (!BTN_PRED)  console.error('Missing #predict');
+  if (!BTN_CLEAR) console.error('Missing #clear');
+  if (!SL_BRUSH)  console.error('Missing #brush');
+  if (!BTN_DL28)  console.error('Missing #download28');
+
+  // --- bind handlers (guarded) ---
+  BTN_PRED && BTN_PRED.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try { predict(); }
+    catch (err) { console.error('predict() failed:', err); }
+  });
+
+  BTN_CLEAR && BTN_CLEAR.addEventListener('click', clearCanvas);
+  SL_BRUSH && SL_BRUSH.addEventListener('input', (e) => {
+    setBrush(parseInt(e.target.value, 10));
+  });
+  BTN_DL28 && BTN_DL28.addEventListener('click', () => {
+    const x = Array.from(to28());
+    const rows = [];
+    for (let r = 0; r < 28; r++) {
+      rows.push(x.slice(r*28,(r+1)*28).map(v=>v.toFixed(6)).join(','));
+    }
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'draw_28x28.csv';
+    a.click();
+  });
+
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') predict();
+    if (e.key === 'c') clearCanvas();
+  });
+});
+
+
 const DOWNSAMPLE = 10;             // 280 -> 28
 let brushR = parseInt(SL_BRUSH.value, 10);
 let drawing = false;
