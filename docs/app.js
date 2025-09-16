@@ -137,26 +137,35 @@ function to28(){
 // --- Model loading
 let W_nb = null, b = null, mu = null;
 async function loadModel(){
-  const w = await fetch("models/perceptron.json").then(r=>r.json());
-  const nC = w.meta?.n_classes || 10;
-  const nF = w.meta?.n_features || 784;
-  const Wflat = Float32Array.from(w.W_nb);
-  W_nb = [];
-  for(let c=0; c<nC; c++){
-    W_nb.push(Wflat.slice(c*nF, (c+1)*nF)); // view per class
-  }
-  b = Float32Array.from(w.b);
-
   try {
-    const m = await fetch("models/mu.json");
-    if(m.ok){
-      const j = await m.json();
-      mu = Float32Array.from(j.mu);
-    }
-  } catch(e){ /* optional */ }
+    const wResp = await fetch("models/perceptron.json");
+    if (!wResp.ok) throw new Error(`weights HTTP ${wResp.status}`);
+    const w = await wResp.json();
 
-  STATUS.textContent = `Loaded ${nC} classes × ${W_nb[0].length} features. Centering: ${mu ? "available" : "none"}.`;
+    const nC = w.meta?.n_classes ?? 10;
+    const nF = w.meta?.n_features ?? 784;
+
+    const Wflat = Float32Array.from(w.W_nb);
+    W_nb = Array.from({length: nC}, (_, c) => Wflat.slice(c*nF, (c+1)*nF));
+    b = Float32Array.from(w.b);
+
+    // optional μ
+    try {
+      const muResp = await fetch("models/mu.json");
+      if (muResp.ok) {
+        const j = await muResp.json();
+        mu = Float32Array.from(j.mu);
+      }
+    } catch {}
+
+    STATUS.textContent = `Loaded ${nC} classes × ${W_nb[0].length} features. Centering: ${mu ? "available" : "none"}.`;
+    document.getElementById("predict")?.removeAttribute("disabled");
+  } catch (err) {
+    STATUS.textContent = `Model load failed: ${String(err)}`;
+    console.error("Model load failed", err);
+  }
 }
+
 loadModel();
 
 // --- Prediction
