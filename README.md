@@ -96,3 +96,15 @@ Draw a digit and run the trained perceptron on it.
 ```bash
 python src/app_draw.py
 ```
+
+## Live Demo (GitHub Pages)
+Try it here: https://h6x-code.github.io/mnist-classic-perceptron/
+
+A zero-backend web demo runs the perceptron entirely in your browser.
+
+- Draw a digit on a 280×280 canvas
+- Downsamples to 28×28 via block-mean
+- Applies the repo’s feature transform (centering if `models/feature_center_mu.npy` was exported)
+- Computes `argmax(W·x + b)` for top-k predictions
+
+**How it’s built:** `src/export_web_assets.py` writes JSON weights/μ to `docs/models/`, and the static app in `docs/` performs inference client-side.
