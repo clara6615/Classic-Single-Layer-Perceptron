@@ -89,7 +89,7 @@ function to28(){
 // --- Model loading
 let W_nb = null, b = null, mu = null;
 async function loadModel(){
-  const w = await fetch("models/perceptron.json").then(r=>r.json());
+  const w = await fetch("model/perceptron.json").then(r=>r.json());
   const nC = w.meta?.n_classes || 10;
   const nF = w.meta?.n_features || 784;
   const Wflat = Float32Array.from(w.W_nb);
@@ -100,7 +100,7 @@ async function loadModel(){
   b = Float32Array.from(w.b);
 
   try {
-    const m = await fetch("models/mu.json");
+    const m = await fetch("model/mu.json");
     if(m.ok){
       const j = await m.json();
       mu = Float32Array.from(j.mu);
