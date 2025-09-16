@@ -95,7 +95,7 @@ main.grid(row=0, column=0, sticky="nsew")
 root.rowconfigure(0, weight=1)
 root.columnconfigure(0, weight=1)
 
-canvas = tk.Canvas(main, width=CANVAS_PIXELS, height=CANVAS_PIXELS, bg="white", highlightthickness=1, highlightbackground="#888")
+canvas = tk.Canvas(main, width=CANVAS_PIXELS, height=CANVAS_PIXELS, bg="black", highlightthickness=1, highlightbackground="#888")
 canvas.grid(row=0, column=0, rowspan=6, sticky="nsew", padx=(0,8), pady=(0,8))
 main.rowconfigure(0, weight=1)
 main.columnconfigure(0, weight=1)
@@ -113,14 +113,14 @@ def on_draw(event):
     draw_disk(event.x, event.y, val=1.0)
     # draw a small dot for visual feedback
     r = BRUSH_RADIUS
-    canvas.create_oval(event.x - r, event.y - r, event.x + r, event.y + r, fill="black", outline="")
+    canvas.create_oval(event.x - r, event.y - r, event.x + r, event.y + r, fill="white", outline="")
 def on_draw_click(event):
     on_draw(event)
 def on_erase(event):
     draw_disk(event.x, event.y, val=0.0)
     r = BRUSH_RADIUS
     # draw white dot to "erase" visually
-    canvas.create_oval(event.x - r, event.y - r, event.x + r, event.y + r, fill="white", outline="")
+    canvas.create_oval(event.x - r, event.y - r, event.x + r, event.y + r, fill="black", outline="")
 def on_erase_click(event): on_erase(event)
 
 canvas.bind("<Button-1>", on_draw_click)

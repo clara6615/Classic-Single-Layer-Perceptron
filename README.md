@@ -1,4 +1,4 @@
-# MNIST Classic Perceptron
+# Classic Single-Layer Perceptron
 
 A from-scratch one-vs-rest Perceptron on classic MNIST (IDX files), with a comparison to `sklearn.linear_model.Perceptron`.
 
