@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   BTN_PRED && BTN_PRED.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    predict();
     try { predict(); }
     catch (err) { console.error('predict() failed:', err); }
   });
