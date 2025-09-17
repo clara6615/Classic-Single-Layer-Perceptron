@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const CB_CENTER= $("useCenter");
   const BTN_DL28 = $("download28");
 
-  // --- Model state (perceptron)
+  // --- Perceptron state
   let W_nb = null, b = null, mu = null;
 
   // --- MLP state (phase-1: 784→128→10)
@@ -42,6 +42,49 @@ document.addEventListener("DOMContentLoaded", () => {
   function setBrush(r){ brushR = r; }
 
   // ----------------------
+  // Numeric + shape helpers
+  // ----------------------
+  const f32 = (arr) => {
+    // Coerce every entry with Number(); guard non-finite to 0
+    const out = new Float32Array(arr.length);
+    for (let i=0;i<arr.length;i++) {
+      const v = Number(arr[i]);
+      out[i] = Number.isFinite(v) ? v : 0;
+    }
+    return out;
+  };
+
+  function reshape2DFlatToRows(flatLike, rows, cols){
+    // Accept JS array or TypedArray; coerce numeric; pad short rows with 0
+    const flat = f32(flatLike);
+    const M = new Array(rows);
+    for (let r=0; r<rows; r++){
+      const row = new Float32Array(cols);
+      const base = r*cols;
+      for (let c=0; c<cols; c++){
+        row[c] = base + c < flat.length ? flat[base+c] : 0;
+      }
+      M[r] = row;
+    }
+    if (flat.length !== rows*cols) {
+      console.warn(`[reshape] length ${flat.length} != ${rows}*${cols} (${rows*cols}); padded with zeros`);
+    }
+    return M;
+  }
+
+  function matvec(W, x, bvec){
+    const out = new Float32Array(W.length);
+    for (let i=0; i<W.length; i++){
+      let s = bvec ? bvec[i] : 0;
+      const row = W[i];
+      for (let k=0; k<row.length; k++) s += row[k]*x[k];
+      out[i] = Number.isFinite(s) ? s : 0; // hard guard
+    }
+    return out;
+  }
+  function relu(v){ for (let i=0;i<v.length;i++) v[i] = v[i] > 0 ? v[i] : 0; return v; }
+
+  // ----------------------
   // Canvas utilities
   // ----------------------
   function drawCircle(x, y, color){
@@ -54,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function clearCanvas(){
     if (!CTX || !CANVAS) return;
-    CTX.fillStyle = "#ffffff"; // white background; adjust if you want black
+    CTX.fillStyle = "#ffffff"; // white background
     CTX.fillRect(0,0,CANVAS.width,CANVAS.height);
     if (PRED)  PRED.textContent  = "Prediction: —";
     if (TOPK)  TOPK.textContent  = "";
@@ -89,9 +132,8 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
         const mean = sum / (DOWNSAMPLE*DOWNSAMPLE*255);
-        // original code inverted regardless; keep behavior but respect checkbox if present
         const inv = CB_INVERT && CB_INVERT.checked;
-        out[by*28 + bx] = inv ? (1 - mean) : (1 - mean); // retained existing logic
+        out[by*28 + bx] = inv ? (1 - mean) : (1 - mean); // current pipeline: foreground≈1
       }
     }
 
@@ -101,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const tmp = new ImageData(28,28);
       for(let i=0;i<28*28;i++){
         const v = Math.max(0, Math.min(1, out[i]));
-        const g = Math.round((1 - v) * 255); // preview polarity aligned with current pipeline
+        const g = Math.round((1 - v) * 255); // preview polarity aligned with pipeline
         tmp.data[i*4+0]=g; tmp.data[i*4+1]=g; tmp.data[i*4+2]=g; tmp.data[i*4+3]=255;
       }
       THUMB.putImageData(tmp,0,0);
@@ -112,29 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ----------------------
-  // Helpers for MLP
-  // ----------------------
-  function reshape2D(flat, rows, cols){
-    const M = new Array(rows);
-    for (let r=0; r<rows; r++){
-      M[r] = new Float32Array(flat.slice(r*cols, (r+1)*cols));
-    }
-    return M;
-  }
-  function matvec(W, x, bvec){
-    const out = new Float32Array(W.length);
-    for (let i=0; i<W.length; i++){
-      let s = bvec ? bvec[i] : 0;
-      const row = W[i];
-      for (let k=0; k<row.length; k++) s += row[k]*x[k];
-      out[i] = s;
-    }
-    return out;
-  }
-  function relu(v){ for (let i=0;i<v.length;i++) v[i] = v[i] > 0 ? v[i] : 0; return v; }
-
-  // ----------------------
-  // Model loading (perceptron fallback)
+  // Loaders
   // ----------------------
   async function loadPerceptron(){
     try {
@@ -145,14 +165,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const nC = w.meta?.n_classes ?? 10;
       const nF = w.meta?.n_features ?? 784;
 
-      const Wflat = Float32Array.from(w.W_nb);
+      const Wflat = f32(w.W_nb);
       W_nb = Array.from({length: nC}, (_, c) => Wflat.slice(c*nF, (c+1)*nF));
-      b = Float32Array.from(w.b);
+      b = f32(w.b);
 
       // optional μ
       try {
         const muResp = await fetch(new URL("models/mu.json", location.href), { cache: "no-store" });
-        if (muResp.ok) mu = Float32Array.from((await muResp.json()).mu);
+        if (muResp.ok) mu = f32((await muResp.json()).mu);
       } catch (e) {
         console.warn("mu.json not available (optional)", e);
       }
@@ -166,9 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ----------------------
-  // Model loading (MLP preferred)
-  // ----------------------
   async function loadMLP(){
     try {
       const resp = await fetch(new URL("models/mlp_p1.json", location.href), { cache:"no-store" });
@@ -179,11 +196,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const H1 = j.b1.length;
       const C  = j.b2.length;
 
-      W1 = reshape2D(j.W1, H1, D);
-      b1 = new Float32Array(j.b1);
-      W2 = reshape2D(j.W2, C,  H1);
-      b2 = new Float32Array(j.b2);
-      MU = j.mu ? new Float32Array(j.mu) : null;
+      // Coerce + reshape safely
+      W1 = reshape2DFlatToRows(j.W1, H1, D);
+      b1 = f32(j.b1);
+      W2 = reshape2DFlatToRows(j.W2, C,  H1);
+      b2 = f32(j.b2);
+      MU = j.mu ? f32(j.mu) : null;
 
       MLP_READY = true;
       if (STATUS) STATUS.textContent = `MLP loaded: ${D}→${H1}→${C}. Centering: ${MU ? "available" : "none"}.`;
@@ -197,7 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ----------------------
   // Inference
   // ----------------------
-  function dot(a, b){ let s=0; for(let i=0;i<a.length;i++) s += a[i]*b[i]; return s; }
+  function dot(a, bv){ let s=0; for(let i=0;i<a.length;i++) s += a[i]*bv[i]; return s; }
   function argTopK(arr, k){
     return arr.map((v,i)=>[v,i]).sort((A,B)=>B[0]-A[0]).slice(0,k).map(p=>p[1]);
   }
@@ -206,40 +224,51 @@ document.addEventListener("DOMContentLoaded", () => {
     let x = x784;
     if (CB_CENTER && CB_CENTER.checked && MU && MU.length === x.length){
       const y = new Float32Array(x.length);
-      for (let i=0;i<x.length;i++) y[i] = x[i] - MU[i];
+      for (let i=0;i<x.length;i++) {
+        const v = x[i] - MU[i];
+        y[i] = Number.isFinite(v) ? v : 0;
+      }
       x = y;
     }
     const h1 = relu(matvec(W1, x, b1));     // 784→128
     const logits = matvec(W2, h1, b2);      // 128→10
+    for (let i=0;i<logits.length;i++) if (!Number.isFinite(logits[i])) logits[i]=0;
     return logits;
   }
 
   function predict(){
     const x28 = to28();
-    const x = Float32Array.from(x28); // 784
+    let x = Float32Array.from(x28); // 784
 
     let scores;
     if (MLP_READY) {
       scores = forwardMLP(x);
     } else {
       if (!W_nb || !b) { console.warn("[predict] Model not loaded yet."); return; }
-      scores = new Array(10).fill(0);
       if (CB_CENTER && CB_CENTER.checked && mu && mu.length === x.length){
-        for(let i=0;i<x.length;i++) x[i] = x[i] - mu[i];
+        for(let i=0;i<x.length;i++){
+          const v = x[i] - mu[i];
+          x[i] = Number.isFinite(v) ? v : 0;
+        }
       }
-      for(let c=0;c<10;c++) scores[c] = dot(W_nb[c], x) + b[c];
+      scores = new Array(10).fill(0);
+      for(let c=0;c<10;c++){
+        const s = dot(W_nb[c], x) + b[c];
+        scores[c] = Number.isFinite(s) ? s : 0;
+      }
     }
 
     const order = argTopK(scores, 3);
     const pred = order[0];
+
     const sTop = order.map(i=>scores[i]);
     const probs = sTop.map(v=>Math.exp(v - sTop[0]));
-    const Z = probs.reduce((a,b)=>a+b,0);
+    const Z = probs.reduce((a,b)=>a+b,0) || 1;
     for(let i=0;i<probs.length;i++) probs[i]/=Z;
 
-    if (PRED)   PRED.textContent = `Prediction: ${pred}`;
+    if (PRED)   PRED.textContent = `Prediction: ${Number.isFinite(scores[pred]) ? pred : "—"}`;
     if (TOPK)   TOPK.textContent = order.map((k,i)=>`${k} (~${probs[i].toFixed(2)})`).join(", ");
-    if (SCORES) SCORES.textContent = scores.map((v,i)=>`${i}: ${v.toFixed(3)}`).join("  ");
+    if (SCORES) SCORES.textContent = scores.map((v,i)=>`${i}: ${Number.isFinite(v)?v.toFixed(3):"NaN"}`).join("  ");
   }
 
   // ----------------------
