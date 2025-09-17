@@ -1,8 +1,8 @@
 "use strict";
 
-/* =========================================================
-   Classic Perceptron -> MLP (auto-detect), drop-in app.js
-   ========================================================= */
+/* =======================================
+   Classic Perceptron -> MLP (auto-detect)
+   ======================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
   const APP_VERSION = "v8"; // bump when deploying to bust caches

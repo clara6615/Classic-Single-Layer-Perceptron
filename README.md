@@ -110,9 +110,4 @@ Draw a digit and run the trained perceptron on it.
 python src/app_draw.py
 ```
 
-# Multi-Layer Perceptron
-Additionally, you could train multi-layer perceptrons through:
-```bash
-python src/train_mlp.py
-```
 
