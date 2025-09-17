@@ -27,8 +27,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const CB_CENTER= $("useCenter");
   const BTN_DL28 = $("download28");
 
-  // --- Model state
+  // --- Model state (perceptron)
   let W_nb = null, b = null, mu = null;
+
+  // --- MLP state (phase-1: 784→128→10)
+  let W1=null, b1=null, W2=null, b2=null, MU=null;
+  let MLP_READY = false;
 
   // --- Brush & drawing state
   const DOWNSAMPLE = 10; // 280 -> 28
@@ -50,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function clearCanvas(){
     if (!CTX || !CANVAS) return;
-    CTX.fillStyle = "#ffffff"; // keep existing white bg (change if you want black)
+    CTX.fillStyle = "#ffffff"; // white background; adjust if you want black
     CTX.fillRect(0,0,CANVAS.width,CANVAS.height);
     if (PRED)  PRED.textContent  = "Prediction: —";
     if (TOPK)  TOPK.textContent  = "";
@@ -85,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
         const mean = sum / (DOWNSAMPLE*DOWNSAMPLE*255);
-        // original code inverted regardless; keep behavior but respect the checkbox if present
+        // original code inverted regardless; keep behavior but respect checkbox if present
         const inv = CB_INVERT && CB_INVERT.checked;
         out[by*28 + bx] = inv ? (1 - mean) : (1 - mean); // retained existing logic
       }
@@ -97,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const tmp = new ImageData(28,28);
       for(let i=0;i<28*28;i++){
         const v = Math.max(0, Math.min(1, out[i]));
-        const g = Math.round((1 - v) * 255); // keep original preview polarity
+        const g = Math.round((1 - v) * 255); // preview polarity aligned with current pipeline
         tmp.data[i*4+0]=g; tmp.data[i*4+1]=g; tmp.data[i*4+2]=g; tmp.data[i*4+3]=255;
       }
       THUMB.putImageData(tmp,0,0);
@@ -108,13 +112,34 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ----------------------
-  // Model loading
+  // Helpers for MLP
   // ----------------------
-  async function loadModel(){
+  function reshape2D(flat, rows, cols){
+    const M = new Array(rows);
+    for (let r=0; r<rows; r++){
+      M[r] = new Float32Array(flat.slice(r*cols, (r+1)*cols));
+    }
+    return M;
+  }
+  function matvec(W, x, bvec){
+    const out = new Float32Array(W.length);
+    for (let i=0; i<W.length; i++){
+      let s = bvec ? bvec[i] : 0;
+      const row = W[i];
+      for (let k=0; k<row.length; k++) s += row[k]*x[k];
+      out[i] = s;
+    }
+    return out;
+  }
+  function relu(v){ for (let i=0;i<v.length;i++) v[i] = v[i] > 0 ? v[i] : 0; return v; }
+
+  // ----------------------
+  // Model loading (perceptron fallback)
+  // ----------------------
+  async function loadPerceptron(){
     try {
-      // GitHub Pages: docs/ is site root, weights in docs/models/
       const wResp = await fetch(new URL("models/perceptron.json", location.href), { cache: "no-store" });
-      if (!wResp.ok) throw new Error(`weights HTTP ${wResp.status}`);
+      if (!wResp.ok) throw new Error(`perceptron.json HTTP ${wResp.status}`);
       const w = await wResp.json();
 
       const nC = w.meta?.n_classes ?? 10;
@@ -132,13 +157,40 @@ document.addEventListener("DOMContentLoaded", () => {
         console.warn("mu.json not available (optional)", e);
       }
 
-      if (STATUS) STATUS.textContent = `Loaded ${nC} classes × ${W_nb[0].length} features. Centering: ${mu ? "available" : "none"}.`;
+      if (STATUS) STATUS.textContent = `Perceptron loaded: ${nF}→${nC}. Centering: ${mu ? "available" : "none"}.`;
     } catch (err) {
-      console.error("Model load failed:", err);
+      console.error("[loadPerceptron] failed:", err);
       if (STATUS) STATUS.textContent = `Model load failed: ${String(err)}`;
     } finally {
-      // Never leave the UI dead; enable regardless so user gets console feedback if model missing
       if (BTN_PRED) BTN_PRED.disabled = false;
+    }
+  }
+
+  // ----------------------
+  // Model loading (MLP preferred)
+  // ----------------------
+  async function loadMLP(){
+    try {
+      const resp = await fetch(new URL("models/mlp_p1.json", location.href), { cache:"no-store" });
+      if (!resp.ok) throw new Error(`mlp_p1.json HTTP ${resp.status}`);
+      const j = await resp.json();
+
+      const D  = j.meta?.n_features ?? 784;
+      const H1 = j.b1.length;
+      const C  = j.b2.length;
+
+      W1 = reshape2D(j.W1, H1, D);
+      b1 = new Float32Array(j.b1);
+      W2 = reshape2D(j.W2, C,  H1);
+      b2 = new Float32Array(j.b2);
+      MU = j.mu ? new Float32Array(j.mu) : null;
+
+      MLP_READY = true;
+      if (STATUS) STATUS.textContent = `MLP loaded: ${D}→${H1}→${C}. Centering: ${MU ? "available" : "none"}.`;
+      if (BTN_PRED) BTN_PRED.disabled = false;
+    } catch (err) {
+      console.warn("[loadMLP] falling back to perceptron:", err);
+      await loadPerceptron();
     }
   }
 
@@ -150,20 +202,33 @@ document.addEventListener("DOMContentLoaded", () => {
     return arr.map((v,i)=>[v,i]).sort((A,B)=>B[0]-A[0]).slice(0,k).map(p=>p[1]);
   }
 
+  function forwardMLP(x784){
+    let x = x784;
+    if (CB_CENTER && CB_CENTER.checked && MU && MU.length === x.length){
+      const y = new Float32Array(x.length);
+      for (let i=0;i<x.length;i++) y[i] = x[i] - MU[i];
+      x = y;
+    }
+    const h1 = relu(matvec(W1, x, b1));     // 784→128
+    const logits = matvec(W2, h1, b2);      // 128→10
+    return logits;
+  }
+
   function predict(){
-    if (!W_nb || !b) {
-      console.warn("[predict] Model not loaded yet.");
-      return;
-    }
     const x28 = to28();
-    const x = Float32Array.from(x28);
+    const x = Float32Array.from(x28); // 784
 
-    if (CB_CENTER && CB_CENTER.checked && mu && mu.length === x.length){
-      for(let i=0;i<x.length;i++) x[i] = x[i] - mu[i];
+    let scores;
+    if (MLP_READY) {
+      scores = forwardMLP(x);
+    } else {
+      if (!W_nb || !b) { console.warn("[predict] Model not loaded yet."); return; }
+      scores = new Array(10).fill(0);
+      if (CB_CENTER && CB_CENTER.checked && mu && mu.length === x.length){
+        for(let i=0;i<x.length;i++) x[i] = x[i] - mu[i];
+      }
+      for(let c=0;c<10;c++) scores[c] = dot(W_nb[c], x) + b[c];
     }
-
-    const scores = new Array(10).fill(0);
-    for(let c=0;c<10;c++) scores[c] = dot(W_nb[c], x) + b[c];
 
     const order = argTopK(scores, 3);
     const pred = order[0];
@@ -220,5 +285,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Kick off
   // ----------------------
   clearCanvas();
-  loadModel();
+  // Prefer MLP; if not present, loader falls back to perceptron automatically.
+  loadMLP();
 });
