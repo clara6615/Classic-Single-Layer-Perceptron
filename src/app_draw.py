@@ -7,22 +7,16 @@ Controls:
 - Buttons: Predict, Clear, Save28 (saves the current 28x28 to reports/draw_28x28.png)
 - Keyboard: 'p' predict, 'c' clear, 's' save
 
-It auto-detects centering: if models/feature_center_mu.npy exists, it subtracts that mean.
+It auto-detects centering: if .models/feature_center_mu.npy exists, it subtracts that mean.
 
 Dependencies: stdlib tkinter, numpy, matplotlib (for optional save preview).
 """
 
 import os
-import time
 import numpy as np
 import tkinter as tk
 from tkinter import ttk
-
-# Try to import matplotlib only for saving a preview image
-try:
-    import matplotlib.pyplot as plt
-except Exception:
-    plt = None
+import matplotlib.pyplot as plt
 
 np.random.seed(42)
 
@@ -30,7 +24,7 @@ CANVAS_PIXELS = 280  # we draw at 280x280 then downsample by 10x to 28x28
 DOWNSAMPLE = CANVAS_PIXELS // 28
 BRUSH_RADIUS = 7     # in canvas pixels
 
-MODELS_DIR = "models"
+MODELS_DIR = ".models"
 WEIGHTS_PATH = os.path.join(MODELS_DIR, "perceptron_scratch_weights.npz")
 MU_PATH = os.path.join(MODELS_DIR, "feature_center_mu.npy")
 
@@ -88,7 +82,7 @@ def predict_top3(x):
 
 # ---- GUI ----
 root = tk.Tk()
-root.title("MNIST Perceptron Sketchpad")
+root.title("Perceptron Sketchpad")
 
 main = ttk.Frame(root, padding=6)
 main.grid(row=0, column=0, sticky="nsew")
