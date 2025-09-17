@@ -7,6 +7,7 @@ __pycache__/
 .venv/
 .env
 .ipynb_checkpoints/
+export_web_assets.py
 
 # OS cruft
 .DS_Store

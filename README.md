@@ -2,6 +2,19 @@
 
 A from-scratch one-vs-rest Perceptron on classic MNIST (IDX files), with a comparison to `sklearn.linear_model.Perceptron`.
 
+## Live Demo (GitHub Pages)
+Try it here: https://h6x-code.github.io/Classic-Single-Layer-Perceptron/
+
+A zero-backend web demo runs the perceptron entirely in your browser.
+
+- Draw a digit on a 280×280 canvas
+- Downsamples to 28×28 via block-mean
+- Applies the repo’s feature transform (centering if `models/feature_center_mu.npy` was exported)
+- Computes `argmax(W·x + b)` for top-k predictions
+
+**How it’s built:** `src/export_web_assets.py` writes JSON weights/μ to `docs/models/`, and the static app in `docs/` performs inference client-side.
+
+
 ## Quickstart
 From project root dir.
 ```bash
@@ -97,14 +110,9 @@ Draw a digit and run the trained perceptron on it.
 python src/app_draw.py
 ```
 
-## Live Demo (GitHub Pages)
-Try it here: https://h6x-code.github.io/Classic-Single-Layer-Perceptron/
+# Multi-Layer Perceptron
+Additionally, you could train multi-layer perceptrons through:
+```bash
+python src/train_mlp.py
+```
 
-A zero-backend web demo runs the perceptron entirely in your browser.
-
-- Draw a digit on a 280×280 canvas
-- Downsamples to 28×28 via block-mean
-- Applies the repo’s feature transform (centering if `models/feature_center_mu.npy` was exported)
-- Computes `argmax(W·x + b)` for top-k predictions
-
-**How it’s built:** `src/export_web_assets.py` writes JSON weights/μ to `docs/models/`, and the static app in `docs/` performs inference client-side.
