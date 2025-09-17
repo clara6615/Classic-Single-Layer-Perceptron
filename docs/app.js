@@ -41,52 +41,72 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setBrush(r){ brushR = r; }
 
-  // ----------------------
-  // Numeric + shape helpers
-  // ----------------------
-  const f32 = (arr) => {
-    // Coerce every entry with Number(); guard non-finite to 0
-    const out = new Float32Array(arr.length);
-    for (let i=0;i<arr.length;i++) {
-      const v = Number(arr[i]);
-      out[i] = Number.isFinite(v) ? v : 0;
-    }
+  /* =========================
+     Numeric hygiene helpers
+     ========================= */
+  const toFinite = (v) => (Number.isFinite(v) ? v : 0);
+  function f32(arrLike){
+    const out = new Float32Array(arrLike.length);
+    for (let i=0;i<arrLike.length;i++) out[i] = toFinite(Number(arrLike[i]));
     return out;
-  };
-
+  }
+  function sanitizeVec(v){
+    for (let i=0;i<v.length;i++){
+      const x = v[i];
+      v[i] = Number.isFinite(x) ? x : 0;
+    }
+    return v;
+  }
   function reshape2DFlatToRows(flatLike, rows, cols){
-    // Accept JS array or TypedArray; coerce numeric; pad short rows with 0
     const flat = f32(flatLike);
+    const need = rows*cols;
+    if (flat.length !== need) {
+      console.warn(`[reshape] length ${flat.length} != ${rows}*${cols}=${need}; padding/truncating`);
+    }
     const M = new Array(rows);
     for (let r=0; r<rows; r++){
       const row = new Float32Array(cols);
       const base = r*cols;
       for (let c=0; c<cols; c++){
-        row[c] = base + c < flat.length ? flat[base+c] : 0;
+        const idx = base + c;
+        row[c] = idx < flat.length ? flat[idx] : 0;
       }
       M[r] = row;
     }
-    if (flat.length !== rows*cols) {
-      console.warn(`[reshape] length ${flat.length} != ${rows}*${cols} (${rows*cols}); padded with zeros`);
-    }
     return M;
   }
-
   function matvec(W, x, bvec){
     const out = new Float32Array(W.length);
     for (let i=0; i<W.length; i++){
       let s = bvec ? bvec[i] : 0;
       const row = W[i];
       for (let k=0; k<row.length; k++) s += row[k]*x[k];
-      out[i] = Number.isFinite(s) ? s : 0; // hard guard
+      out[i] = toFinite(s);
     }
     return out;
   }
   function relu(v){ for (let i=0;i<v.length;i++) v[i] = v[i] > 0 ? v[i] : 0; return v; }
+  function safeTopK(scores, k){
+    // treat NaN as -Infinity for ranking
+    const pairs = scores.map((v,i)=>[(Number.isFinite(v)?v:-Infinity), i]);
+    pairs.sort((A,B)=>B[0]-A[0]);
+    return pairs.slice(0,k).map(p=>p[1]);
+  }
+  function safeSoftmaxTop(probsLike){
+    // probsLike = logits aligned to top list; numerically safe
+    const a = probsLike.slice();
+    for (let i=0;i<a.length;i++) a[i] = toFinite(a[i]);
+    const s0 = Math.max(...a);
+    let Z = 0;
+    for (let i=0;i<a.length;i++){ a[i] = Math.exp(a[i]-s0); Z += a[i]; }
+    if (!Number.isFinite(Z) || Z === 0) { for (let i=0;i<a.length;i++) a[i] = 0; return a; }
+    for (let i=0;i<a.length;i++) a[i] /= Z;
+    return a;
+  }
 
-  // ----------------------
-  // Canvas utilities
-  // ----------------------
+  /* =========================
+     Canvas utilities
+     ========================= */
   function drawCircle(x, y, color){
     if (!CTX) return;
     CTX.fillStyle = color;
@@ -114,9 +134,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return {x,y};
   }
 
-  // ----------------------
-  // Downsample 280 -> 28
-  // ----------------------
+  /* =========================
+     Downsample 280 -> 28
+     ========================= */
   function to28(){
     if (!CTX) return new Float32Array(28*28);
     const img = CTX.getImageData(0,0,280,280).data; // RGBA
@@ -132,8 +152,8 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
         const mean = sum / (DOWNSAMPLE*DOWNSAMPLE*255);
-        const inv = CB_INVERT && CB_INVERT.checked;
-        out[by*28 + bx] = inv ? (1 - mean) : (1 - mean); // current pipeline: foreground≈1
+        // pipeline produces foreground≈1, background≈0
+        out[by*28 + bx] = 1 - mean;
       }
     }
 
@@ -143,19 +163,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const tmp = new ImageData(28,28);
       for(let i=0;i<28*28;i++){
         const v = Math.max(0, Math.min(1, out[i]));
-        const g = Math.round((1 - v) * 255); // preview polarity aligned with pipeline
+        const g = Math.round((1 - v) * 255); // preview contrast matches prior UI
         tmp.data[i*4+0]=g; tmp.data[i*4+1]=g; tmp.data[i*4+2]=g; tmp.data[i*4+3]=255;
       }
       THUMB.putImageData(tmp,0,0);
       THUMB.drawImage(THUMB.canvas,0,0,28,28,0,0,140,140);
     }
 
-    return out;
+    return sanitizeVec(out);
   }
 
-  // ----------------------
-  // Loaders
-  // ----------------------
+  /* =========================
+     Loaders
+     ========================= */
   async function loadPerceptron(){
     try {
       const wResp = await fetch(new URL("models/perceptron.json", location.href), { cache: "no-store" });
@@ -169,20 +189,17 @@ document.addEventListener("DOMContentLoaded", () => {
       W_nb = Array.from({length: nC}, (_, c) => Wflat.slice(c*nF, (c+1)*nF));
       b = f32(w.b);
 
-      // optional μ
       try {
         const muResp = await fetch(new URL("models/mu.json", location.href), { cache: "no-store" });
         if (muResp.ok) mu = f32((await muResp.json()).mu);
-      } catch (e) {
-        console.warn("mu.json not available (optional)", e);
-      }
+      } catch {}
 
-      if (STATUS) STATUS.textContent = `Perceptron loaded: ${nF}→${nC}. Centering: ${mu ? "available" : "none"}.`;
+      STATUS && (STATUS.textContent = `Perceptron loaded: ${nF}→${nC}. Centering: ${mu ? "available" : "none"}.`);
     } catch (err) {
       console.error("[loadPerceptron] failed:", err);
-      if (STATUS) STATUS.textContent = `Model load failed: ${String(err)}`;
+      STATUS && (STATUS.textContent = `Model load failed: ${String(err)}`);
     } finally {
-      if (BTN_PRED) BTN_PRED.disabled = false;
+      BTN_PRED && (BTN_PRED.disabled = false);
     }
   }
 
@@ -196,84 +213,77 @@ document.addEventListener("DOMContentLoaded", () => {
       const H1 = j.b1.length;
       const C  = j.b2.length;
 
-      // Coerce + reshape safely
       W1 = reshape2DFlatToRows(j.W1, H1, D);
       b1 = f32(j.b1);
       W2 = reshape2DFlatToRows(j.W2, C,  H1);
       b2 = f32(j.b2);
       MU = j.mu ? f32(j.mu) : null;
 
+      // sanity
+      if (W1.length!==H1 || W1[0].length!==D || W2.length!==C || W2[0].length!==H1){
+        console.warn("[loadMLP] unexpected shapes; continuing with padding/truncation");
+      }
+
       MLP_READY = true;
-      if (STATUS) STATUS.textContent = `MLP loaded: ${D}→${H1}→${C}. Centering: ${MU ? "available" : "none"}.`;
-      if (BTN_PRED) BTN_PRED.disabled = false;
+      STATUS && (STATUS.textContent = `MLP loaded: ${D}→${H1}→${C}. Centering: ${MU ? "available" : "none"}.`);
+      BTN_PRED && (BTN_PRED.disabled = false);
     } catch (err) {
       console.warn("[loadMLP] falling back to perceptron:", err);
       await loadPerceptron();
     }
   }
 
-  // ----------------------
-  // Inference
-  // ----------------------
-  function dot(a, bv){ let s=0; for(let i=0;i<a.length;i++) s += a[i]*bv[i]; return s; }
-  function argTopK(arr, k){
-    return arr.map((v,i)=>[v,i]).sort((A,B)=>B[0]-A[0]).slice(0,k).map(p=>p[1]);
-  }
-
+  /* =========================
+     Inference
+     ========================= */
   function forwardMLP(x784){
-    let x = x784;
+    let x = sanitizeVec(Float32Array.from(x784));
+
     if (CB_CENTER && CB_CENTER.checked && MU && MU.length === x.length){
-      const y = new Float32Array(x.length);
       for (let i=0;i<x.length;i++) {
-        const v = x[i] - MU[i];
-        y[i] = Number.isFinite(v) ? v : 0;
+        x[i] = toFinite(x[i] - MU[i]);
       }
-      x = y;
     }
-    const h1 = relu(matvec(W1, x, b1));     // 784→128
-    const logits = matvec(W2, h1, b2);      // 128→10
-    for (let i=0;i<logits.length;i++) if (!Number.isFinite(logits[i])) logits[i]=0;
-    return logits;
+    const h1 = relu(matvec(W1, x, b1));      // 784→128
+    const logits = matvec(W2, h1, b2);       // 128→10
+    return sanitizeVec(logits);
   }
 
   function predict(){
-    const x28 = to28();
-    let x = Float32Array.from(x28); // 784
+    const x = to28(); // already sanitized
 
     let scores;
     if (MLP_READY) {
       scores = forwardMLP(x);
     } else {
       if (!W_nb || !b) { console.warn("[predict] Model not loaded yet."); return; }
-      if (CB_CENTER && CB_CENTER.checked && mu && mu.length === x.length){
-        for(let i=0;i<x.length;i++){
-          const v = x[i] - mu[i];
-          x[i] = Number.isFinite(v) ? v : 0;
-        }
+      const x2 = Float32Array.from(x);
+      if (CB_CENTER && CB_CENTER.checked && mu && mu.length === x2.length){
+        for(let i=0;i<x2.length;i++) x2[i] = toFinite(x2[i] - mu[i]);
       }
       scores = new Array(10).fill(0);
       for(let c=0;c<10;c++){
-        const s = dot(W_nb[c], x) + b[c];
-        scores[c] = Number.isFinite(s) ? s : 0;
+        let s = b[c];
+        const wrow = W_nb[c];
+        for (let i=0;i<wrow.length;i++) s += wrow[i]*x2[i];
+        scores[c] = toFinite(s);
       }
     }
 
-    const order = argTopK(scores, 3);
+    const order = safeTopK(scores, 3);
     const pred = order[0];
 
     const sTop = order.map(i=>scores[i]);
-    const probs = sTop.map(v=>Math.exp(v - sTop[0]));
-    const Z = probs.reduce((a,b)=>a+b,0) || 1;
-    for(let i=0;i<probs.length;i++) probs[i]/=Z;
+    const probs = safeSoftmaxTop(sTop);
 
-    if (PRED)   PRED.textContent = `Prediction: ${Number.isFinite(scores[pred]) ? pred : "—"}`;
-    if (TOPK)   TOPK.textContent = order.map((k,i)=>`${k} (~${probs[i].toFixed(2)})`).join(", ");
-    if (SCORES) SCORES.textContent = scores.map((v,i)=>`${i}: ${Number.isFinite(v)?v.toFixed(3):"NaN"}`).join("  ");
+    PRED && (PRED.textContent = `Prediction: ${Number.isFinite(scores[pred]) ? pred : "—"}`);
+    TOPK &&  (TOPK.textContent  = order.map((k,i)=>`${k} (~${(Number.isFinite(probs[i])?probs[i]:0).toFixed(2)})`).join(", "));
+    SCORES &&(SCORES.textContent= scores.map((v,i)=>`${i}: ${Number.isFinite(v)?v.toFixed(3):"NaN"}`).join("  "));
   }
 
-  // ----------------------
-  // Event wiring (single source of truth)
-  // ----------------------
+  /* =========================
+     Events
+     ========================= */
   if (SL_BRUSH) SL_BRUSH.addEventListener("input", e => setBrush(parseInt(e.target.value,10)));
 
   if (CANVAS) {
@@ -299,21 +309,15 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   if (BTN_PRED) {
-    // Ensure it's a non-submit button in case it sits inside a <form>
     if (!BTN_PRED.hasAttribute("type")) BTN_PRED.setAttribute("type","button");
-    BTN_PRED.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      predict();
-    });
+    BTN_PRED.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); predict(); });
   }
 
   window.addEventListener("keydown", (e)=>{ if(e.code==="Space") predict(); if(e.key==="c") clearCanvas(); });
 
-  // ----------------------
-  // Kick off
-  // ----------------------
+  /* =========================
+     Kick off
+     ========================= */
   clearCanvas();
-  // Prefer MLP; if not present, loader falls back to perceptron automatically.
-  loadMLP();
+  loadMLP(); // prefer MLP; falls back to perceptron
 });
